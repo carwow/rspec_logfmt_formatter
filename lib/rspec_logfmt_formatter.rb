@@ -1,10 +1,9 @@
 # frozen_string_literal: true
 
-require "time"
+require 'time'
 
-require "rspec/core"
-require "rspec/core/formatters/base_formatter"
-
+require 'rspec/core'
+require 'rspec/core/formatters/base_formatter'
 
 class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
   RSpec::Core::Formatters.register self,
@@ -32,7 +31,7 @@ class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
     @retries << example
   end
 
-private
+  private
 
   attr_reader :started, :retries
 
@@ -66,14 +65,14 @@ private
   end
 
   def fmt_dump
-    output << %{ rspec.name="rspec#{ENV["TEST_ENV_NUMBER"].to_s}"}
-    output << %{ rspec.tests="#{example_count}"}
-    output << %{ rspec.skipped="#{pending_count}"}
-    output << %{ rspec.failures="#{failure_count}"}
-    output << %{ rspec.errors="#{error_count}"}
-    output << %{ rspec.time="#{"%.6f" % duration}"}
-    output << %{ rspec.timestamp="#{started.iso8601}"}
-    output << %{ rspec.retries.count="#{retries.size}"}
-    output << %{\n}
+    output << %( rspec.name="rspec#{ENV['TEST_ENV_NUMBER']}")
+    output << %( rspec.tests="#{example_count}")
+    output << %( rspec.skipped="#{pending_count}")
+    output << %( rspec.failures="#{failure_count}")
+    output << %( rspec.errors="#{error_count}")
+    output << %( rspec.time="#{'%.6f' % duration}")
+    output << %( rspec.timestamp="#{started.iso8601}")
+    output << %( rspec.retries.count="#{retries.size}")
+    output << %(\n)
   end
 end
