@@ -64,15 +64,16 @@ class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
     end
   end
 
+  # rubocop:disable Metrics/AbcSize
   def fmt_dump
     output << %( rspec.name="rspec#{ENV['TEST_ENV_NUMBER']}")
     output << %( rspec.tests="#{example_count}")
     output << %( rspec.skipped="#{pending_count}")
     output << %( rspec.failures="#{failure_count}")
     output << %( rspec.errors="#{error_count}")
-    output << %( rspec.time="#{'%.6f' % duration}")
+    output << %( rspec.time="#{format('%.6f', duration)}")
     output << %( rspec.timestamp="#{started.iso8601}")
     output << %( rspec.retries.count="#{retries.size}")
-    output << %(\n)
   end
+  # rubocop:enable Metrics/AbcSize
 end

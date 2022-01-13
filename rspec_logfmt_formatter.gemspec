@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
   s.description = ''
   s.license     = 'MIT'
 
-  s.required_ruby_version = '>= 2.3.0'
+  s.required_ruby_version = '>= 2.7.0'
   s.required_rubygems_version = '>= 2.0.0'
 
   s.files = Dir['lib/**/*', 'README.md', 'LICENSE']
