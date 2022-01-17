@@ -12,8 +12,6 @@ describe RspecLogfmtFormatter do
     File.read(formatter_output_path)
   end
   let(:formatter_arguments) { ['--format', 'RspecLogfmtFormatter', '--out', formatter_output_path] }
-  let(:extra_arguments) { [] }
-  let(:example_dir) { File.expand_path('../example', __dir__) }
 
   def safe_pty(command, **pty_options)
     output = StringIO.new
@@ -30,9 +28,9 @@ describe RspecLogfmtFormatter do
   end
 
   def execute_example_spec
-    command = ['bundle', 'exec', 'rspec', *formatter_arguments, *extra_arguments]
+    command = ['bundle', 'exec', 'rspec', *formatter_arguments]
 
-    safe_pty(command, chdir: example_dir)
+    safe_pty(command, chdir: File.expand_path('../example', __dir__))
   end
 
   # Combined into a single example so we don't have to re-run the example rspec
@@ -48,12 +46,12 @@ describe RspecLogfmtFormatter do
       expect(formatter_output.match(/tests.skipped="(\w+)"/)[1]).to eql('1')
       expect(formatter_output.match(/tests.failures="(\w+)"/)[1]).to eql('2')
       expect(formatter_output.match(/tests.errors="(\w+)"/)[1]).to eql('0')
-      expect(formatter_output.match(/tests.duration_seconds="(0.\w+)"/)[1].to_f).to be_within(0.01).of(0.01)
+      expect(formatter_output.match(/tests.duration_seconds="(0.\w+)"/)[1].to_f).to be_within(0.02).of(0.01)
       expect(formatter_output.match(/tests.retries.count="(\w+)"/)[1]).to eql('0')
     end
   end
 
-  context '$TEST_ENV_NUMBER is set' do
+  context 'TEST_ENV_NUMBER is set' do
     around do |example|
       ENV['TEST_ENV_NUMBER'] = '2'
       example.call

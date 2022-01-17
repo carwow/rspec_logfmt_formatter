@@ -1,12 +1,14 @@
 require 'spec_helper'
 
-describe 'some example specs' do
+describe 'ExampleSpecs' do
+  let(:test) { 1 }
+
   it 'succeeds' do
-    expect(true).to be(true)
+    expect(test).to be_an(Integer)
   end
 
   it 'fails' do
-    expect(false).to be(true)
+    expect(test).to be_a(String)
   end
 
   it 'raises' do
