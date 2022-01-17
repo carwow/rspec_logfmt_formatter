@@ -18,4 +18,8 @@ describe 'ExampleSpecs' do
   xit 'should be pending' do
     pending
   end
+
+  it 'retries', :retry_spec do
+    expect(test).to be_a(String)
+  end
 end

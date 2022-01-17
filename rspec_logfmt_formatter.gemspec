@@ -20,6 +20,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'carwow_rubocop', '3.4.4'
   s.add_development_dependency 'pry'
   s.add_development_dependency 'rake'
+  s.add_development_dependency 'rspec-retry'
 
   s.add_dependency 'rspec-core', '>= 2', '< 4'
   s.metadata['rubygems_mfa_required'] = 'true'
