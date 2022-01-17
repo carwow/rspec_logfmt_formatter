@@ -51,12 +51,7 @@ class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
     @summary_notification.duration
   end
 
-  def examples
-    @examples_notification.notifications
-  end
-
   def error_count
-    # Introduced in rspec 3.6
     if @summary_notification.respond_to?(:errors_outside_of_examples_count)
       @summary_notification.errors_outside_of_examples_count
     else
@@ -66,14 +61,13 @@ class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
 
   # rubocop:disable Metrics/AbcSize
   def fmt_dump
-    output << %( rspec.name="rspec#{ENV['TEST_ENV_NUMBER']}")
-    output << %( rspec.tests="#{example_count}")
-    output << %( rspec.skipped="#{pending_count}")
-    output << %( rspec.failures="#{failure_count}")
-    output << %( rspec.errors="#{error_count}")
-    output << %( rspec.time="#{format('%.6f', duration)}")
-    output << %( rspec.timestamp="#{started.iso8601}")
-    output << %( rspec.retries.count="#{retries.size}")
+    output << %( tests.name="rspec#{ENV['TEST_ENV_NUMBER']}")
+    output << %( tests.count="#{example_count}")
+    output << %( tests.skipped="#{pending_count}")
+    output << %( tests.failures="#{failure_count}")
+    output << %( tests.errors="#{error_count}")
+    output << %( tests.duration_seconds="#{format('%.6f', duration)}")
+    output << %( tests.retries.count="#{retries.size}")
   end
   # rubocop:enable Metrics/AbcSize
 end
