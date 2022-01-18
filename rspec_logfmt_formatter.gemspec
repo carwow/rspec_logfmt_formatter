@@ -1,6 +1,6 @@
 lib = File.expand_path('lib', __dir__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'rspec_logfmt_formatter'
+require 'rspec_logfmt_formatter/version'
 
 Gem::Specification.new do |s|
   s.name        = 'rspec_logfmt_formatter'

@@ -1,3 +1,3 @@
-class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
+module RspecLogfmtFormatter
   VERSION = '0.0.1'.freeze
 end

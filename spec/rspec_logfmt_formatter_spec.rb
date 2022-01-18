@@ -11,7 +11,7 @@ describe RspecLogfmtFormatter do
     output
     File.read(formatter_output_path)
   end
-  let(:formatter_arguments) { ['--format', 'RspecLogfmtFormatter', '--out', formatter_output_path] }
+  let(:formatter_arguments) { ['--format', 'RspecLogfmtFormatter::Formatter', '--out', formatter_output_path] }
 
   def safe_pty(command, **pty_options)
     output = StringIO.new
