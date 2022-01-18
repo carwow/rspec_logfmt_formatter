@@ -66,7 +66,6 @@ class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
     output << %( tests.skipped="#{pending_count}")
     output << %( tests.failures="#{failure_count}")
     output << %( tests.errors="#{error_count}")
-    output << %( tests.duration_seconds="#{format('%.6f', duration)}")
     output << %( tests.retries.count="#{retries.size}")
   end
   # rubocop:enable Metrics/AbcSize

@@ -42,7 +42,6 @@ describe RspecLogfmtFormatter do
       expect(formatter_output.match(/tests.skipped="(\w+)"/)[1]).to eql('1')
       expect(formatter_output.match(/tests.failures="(\w+)"/)[1]).to eql('3')
       expect(formatter_output.match(/tests.errors="(\w+)"/)[1]).to eql('0')
-      expect(formatter_output.match(/tests.duration_seconds="(0.\w+)"/)[1].to_f).to be_within(0.02).of(0.01)
       expect(formatter_output.match(/tests.retries.count="(\w+)"/)[1]).to eql('1')
     end
   end
