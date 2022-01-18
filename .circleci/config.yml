@@ -37,6 +37,16 @@ jobs:
             - run: bundle install --jobs=4 --retry=3
             - run: bundle exec rubocop -p
 
+  publish_gem:
+    executor: carwow/ruby
+    steps:
+      - buildevents/with_job_span:
+          steps:
+            - checkout
+            - run: bundle install --jobs=4 --retry=3
+            - run: bundle exec rake upload
+
+
 workflows:
   version: 2
   build-and-deploy:
@@ -51,3 +61,12 @@ workflows:
 
       - lint_ruby:
           requires: [carwow/start]
+
+      - publish_gem:
+          context: org-global
+          requires:
+            - tests
+            - lint_ruby
+          filters:
+            branches:
+              only: [master]
