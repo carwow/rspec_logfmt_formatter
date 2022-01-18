@@ -70,3 +70,5 @@ class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
   end
   # rubocop:enable Metrics/AbcSize
 end
+
+require 'rspec_logfmt_formatter/version'
