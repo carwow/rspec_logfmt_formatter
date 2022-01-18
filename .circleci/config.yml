@@ -22,7 +22,10 @@ jobs:
             - run:
                 name: Running gem tests
                 command: |
-                  bundle exec rspec
+                  mkdir -p test-results/rspec;
+                  bundle exec rspec --format RspecLogfmtFormatter --out test-results/rspec/rspec.txt
+            - store_test_results:
+                path: test-results/rspec
   lint_ruby:
     executor: carwow/ruby
     steps:
