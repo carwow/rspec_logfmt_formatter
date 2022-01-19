@@ -11,14 +11,10 @@
 ## Usage
 
 Install the gem:
-<details>
-<summary>WIP</summary>
 
 ```sh
 gem install rspec_logfmt_formatter
 ```
-
-</details>
 
 Use it:
 
@@ -67,7 +63,13 @@ For use with `parallel_tests`, add `$TEST_ENV_NUMBER` in the output file option 
 
 ### How to push to Honeycomb
 
-TODO
+There are many ways you can push this to honeycomb. One way is to use the [buildevents][buildevents] binary. Then output your spec output to `BUILDEVENT_FILE` e.g.
+
+```sh
+bundle exec rspec --format RspecLogfmtFormatter::Formatter --out $BUILDEVENT_FILE
+```
+
+  [buildevents]: https://github.com/honeycombio/buildevents
 
 ## Development
 
