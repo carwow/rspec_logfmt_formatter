@@ -28,4 +28,5 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'rspec-retry'
 
   s.add_dependency 'rspec-core', '>= 2', '< 4'
+  s.metadata['rubygems_mfa_required'] = 'true'
 end
