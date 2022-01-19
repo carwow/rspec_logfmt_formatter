@@ -32,16 +32,13 @@ Ideally, a bug report should include a pull request with failing specs.
 2. [Create a topic branch.][branch]
 3. Implement your feature or bug fix.
 4. Add, commit, and push your changes.
-5. [Submit a pull request.][pr]
+5. Please add tests if you changed code. Contributions without tests won't be accepted.
+6. Please don't update the Gem version.
+7. [Submit a pull request.][pr]
 
 [fork]: https://help.github.com/articles/fork-a-repo/
 [branch]: https://help.github.com/articles/creating-and-deleting-branches-within-your-repository/
 [pr]: https://help.github.com/articles/using-pull-requests/
-
-### Notes
-
-* Please add tests if you changed code. Contributions without tests won't be accepted.
-* Please don't update the Gem version.
 
 ## Setting up
 
