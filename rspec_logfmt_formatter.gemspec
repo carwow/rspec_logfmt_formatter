@@ -2,6 +2,7 @@ lib = File.expand_path('lib', __dir__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'rspec_logfmt_formatter/version'
 
+# rubocop:disable Gemspec/RequireMFA
 Gem::Specification.new do |s|
   s.name        = 'rspec_logfmt_formatter'
   s.version     = RspecLogfmtFormatter::VERSION
@@ -28,5 +29,5 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'rspec-retry'
 
   s.add_dependency 'rspec-core', '>= 2', '< 4'
-  s.metadata['rubygems_mfa_required'] = 'true'
 end
+# rubocop:enable Gemspec/RequireMFA
