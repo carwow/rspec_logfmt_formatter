@@ -2,7 +2,7 @@
 
 [![CircleCI](https://circleci.com/gh/carwow/rspec_logfmt_formatter/tree/master.svg?style=svg)](https://circleci.com/gh/carwow/rspec_logfmt_formatter/tree/master)
 
-[RSpec][rspec] 3 results in the [logfmt][logfmt] format that you can push to you observability tool such as [Honeycomb][honeycomb]
+[RSpec][rspec] 3 results in the [logfmt][logfmt] format that you can push to your observability tool such as [Honeycomb][honeycomb]
 
   [rspec]: http://rspec.info/
   [logfmt]: https://brandur.org/logfmt
