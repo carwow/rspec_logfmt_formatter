@@ -8,8 +8,8 @@ Gem::Specification.new do |s|
   s.platform    = Gem::Platform::RUBY
   s.author      = 'Richard Vickerstaff'
   s.email       = ['developers@carwow.co.uk']
-  s.homepage    = ''
-  s.summary     = ''
+  s.homepage    = 'https://github.com/carwow/rspec_logfmt_formatter'
+  s.summary     = 'RSpec formatter that honeycomb can read'
   s.description = ''
   s.license     = 'MIT'
 
