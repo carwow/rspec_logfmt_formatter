@@ -61,12 +61,3 @@ workflows:
 
       - lint_ruby:
           requires: [carwow/start]
-
-      - publish_gem:
-          context: org-global
-          requires:
-            - tests
-            - lint_ruby
-          filters:
-            branches:
-              only: [master]
