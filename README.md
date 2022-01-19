@@ -71,11 +71,17 @@ TODO
 
 ## Development
 
-TODO
+Pull the repo and run `bundle install`, the specs are run with `bundle exec rspec` and make sure to read the [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## Releasing
 
-TODO
+Currently this is a manual process and can only be run by a carwow developer.
+
+1. Ensure your `~/.gem/credentials` are correct
+2. Update the [CHANGELOG.md](./CHANGELOG.md)
+3. Update the [version.rb](./lib/rspec_logfmt_formatter/version.rb)
+4. Run `bundle exec rake upload`
+5. Check the tag was pushed and the new version was released
 
 ## License
 
