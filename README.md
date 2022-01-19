@@ -23,7 +23,7 @@ gem install rspec_logfmt_formatter
 Use it:
 
 ```sh
-rspec --format RspecLogfmtFormatter --out rspec.txt
+rspec --format RspecLogfmtFormatter::Formatter --out rspec.txt
 ```
 
 You'll get a file `rspec.txt` with your results in it.
@@ -31,7 +31,7 @@ You'll get a file `rspec.txt` with your results in it.
 You can use it in combination with other [formatters][rspec-formatters], too:
 
 ```sh
-rspec --format progress --format RspecLogfmtFormatter --out rspec.txt
+rspec --format progress --format RspecLogfmtFormatter::Formatter --out rspec.txt
 ```
 
   [rspec-formatters]: https://relishapp.com/rspec/rspec-core/v/3-6/docs/formatters
@@ -50,7 +50,7 @@ end
 Put the same arguments as the commands above in [your `.rspec`][rspec-file]:
 
 ```sh
---format RspecLogfmtFormatter
+--format RspecLogfmtFormatter::Formatter
 --out rspec.txt
 ```
   [bundler]: https://bundler.io
@@ -61,7 +61,7 @@ Put the same arguments as the commands above in [your `.rspec`][rspec-file]:
 For use with `parallel_tests`, add `$TEST_ENV_NUMBER` in the output file option (in `.rspec` or `.rspec_parallel`) to avoid concurrent process write conflicts.
 
 ```sh
---format RspecLogfmtFormatter
+--format RspecLogfmtFormatter::Formatter
 --out tmp/rspec<%= ENV["TEST_ENV_NUMBER"] %>.txt
 ```
 

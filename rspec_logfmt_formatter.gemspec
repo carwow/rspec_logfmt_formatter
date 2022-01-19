@@ -1,6 +1,10 @@
+lib = File.expand_path('lib', __dir__)
+$LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
+require 'rspec_logfmt_formatter/version'
+
 Gem::Specification.new do |s|
   s.name        = 'rspec_logfmt_formatter'
-  s.version     = '0.0.1'
+  s.version     = RspecLogfmtFormatter::VERSION
   s.platform    = Gem::Platform::RUBY
   s.author      = 'Richard Vickerstaff'
   s.email       = ['developers@carwow.co.uk']
