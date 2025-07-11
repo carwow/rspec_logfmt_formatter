@@ -1,5 +1,8 @@
-source 'https://rubygems.org'
+source "https://rubygems.org"
 
 gemspec
 
-gem 'rspec'
+gem "rake"
+gem "rspec"
+gem "rspec-retry"
+gem "standard", ">= 1.50.0"

@@ -1,0 +1,10 @@
+#!/usr/bin/env ruby
+
+require "rspec_logfmt_formatter"
+
+file = ARGV.first
+out = -> { file ? File.new(file, "w") : $stdout }
+
+ARGF.read
+  .then { RspecLogfmtFormatter.collate it }
+  .then { out.call.puts it }
