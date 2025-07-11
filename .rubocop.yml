@@ -1,3 +1,12 @@
 inherit_gem:
   carwow_rubocop:
     - default.yml
+
+AllCops:
+  TargetRubyVersion: 3.2
+
+RSpec/ExampleLength:
+  Enabled: false
+
+RSpec/MultipleMemoizedHelpers:
+  Enabled: false

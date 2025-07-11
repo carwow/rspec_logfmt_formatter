@@ -1,11 +1,6 @@
-lib = File.expand_path('lib', __dir__)
-$LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'rspec_logfmt_formatter/version'
-
-# rubocop:disable Gemspec/RequireMFA
-Gem::Specification.new do |s|
+Gem::Specification.new do |s| # rubocop:disable Gemspec/RequireMFA
   s.name        = 'rspec_logfmt_formatter'
-  s.version     = RspecLogfmtFormatter::VERSION
+  s.version     = '0.0.2'
   s.platform    = Gem::Platform::RUBY
   s.author      = 'Richard Vickerstaff'
   s.email       = ['developers@carwow.co.uk']
@@ -14,20 +9,12 @@ Gem::Specification.new do |s|
   s.description = ''
   s.license     = 'MIT'
 
-  s.required_ruby_version = '>= 2.7.0'
-  s.required_rubygems_version = '>= 2.0.0'
-
-  s.files = Dir['lib/**/*', 'README.md', 'LICENSE']
-  s.test_files = s.files.grep(%r{^(test|spec|features)/})
   s.require_path = 'lib'
+  s.files = Dir['exe/*', 'lib/**/*', 'README.md', 'LICENSE']
 
-  s.add_development_dependency 'bundler'
-  s.add_development_dependency 'carwow_rubocop', '3.4.4'
-  s.add_development_dependency 'pry'
-  s.add_development_dependency 'rake'
-  s.add_development_dependency 'rspec_junit_formatter'
-  s.add_development_dependency 'rspec-retry'
+  s.bindir = 'exe'
+  s.executables = s.files.grep(%r{^exe/}) { |f| File.basename(f) }
 
-  s.add_dependency 'rspec-core', '>= 2', '< 4'
+  s.required_ruby_version = '>= 3.2'
+  s.add_dependency 'rspec-core', '>= 3.6', '< 4'
 end
-# rubocop:enable Gemspec/RequireMFA

@@ -11,12 +11,12 @@ describe 'ExampleSpecs' do
     expect(test).to be_a(String)
   end
 
-  it 'raises' do
+  it 'raises' do # rubocop:disable RSpec/NoExpectationExample
     raise ArgumentError
   end
 
-  xit 'should be pending' do
-    pending
+  xit 'pending' do # rubocop:disable RSpec/PendingWithoutReason
+    pending 'pending'
   end
 
   it 'retries', :retry_spec do

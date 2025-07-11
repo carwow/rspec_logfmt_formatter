@@ -1,61 +1,64 @@
 require 'pty'
-require 'pry'
 require 'stringio'
+require 'fileutils'
 require 'rspec_logfmt_formatter'
 
 describe RspecLogfmtFormatter do
+  let(:formatter_arguments) { ['--format', described_class.to_s, '--out', formatter_output_file] }
+  let(:formatter_output_file) { File.join(File.expand_path('../tmp', __dir__), 'rspec_logfmt.txt') }
+  let(:formatter_output) { File.read(formatter_output_file) }
+  let(:example_spec_output) { StringIO.new }
+  let(:example_dir) { File.expand_path('../example', __dir__) }
   let(:tmp_dir) { File.expand_path('../tmp', __dir__) }
-  let(:formatter_output_path) { File.join(tmp_dir, 'rspec_logfmt.txt') }
-  let(:output) { execute_example_spec }
-  let(:formatter_output) do
-    output
-    File.read(formatter_output_path)
+
+  after do |example|
+    if example.exception
+      puts 'Example spec output below'
+      puts example_spec_output.string
+      puts 'Example spec output above'
+      if File.exist? formatter_output_file
+        puts 'Formatter output below'
+        puts formatter_output
+        puts 'End formatter output'
+      end
+    end
   end
-  let(:formatter_arguments) { ['--format', 'RspecLogfmtFormatter::Formatter', '--out', formatter_output_path] }
 
-  def safe_pty(command, **pty_options)
-    output = StringIO.new
+  def execute_example_spec
+    FileUtils.rm_f formatter_output_file
 
-    PTY.spawn(*command, **pty_options) do |r, _w, pid|
-      r.each_line { |line| output.puts(line) }
+    PTY.spawn('bundle', 'exec', 'rspec', *formatter_arguments, chdir: example_dir) do |r, _w, pid|
+      r.each_line { |line| example_spec_output.puts(line) }
     rescue Errno::EIO
       # Command closed output, or exited
     ensure
       Process.wait pid
     end
-
-    output.string
   end
 
-  def execute_example_spec
-    command = ['bundle', 'exec', 'rspec', *formatter_arguments]
+  it 'correctly describes the test results', :aggregate_failures do
+    execute_example_spec
 
-    safe_pty(command, chdir: File.expand_path('../example', __dir__))
+    expect(formatter_output).to match(/tests\.count="5"/)
+    expect(formatter_output).to match(/tests\.skipped="1"/)
+    expect(formatter_output).to match(/tests\.failures="3"/)
+    expect(formatter_output).to match(/tests\.errors="0"/)
+    expect(formatter_output).to match(/tests\.retries="1"/)
   end
 
-  context '$TEST_ENV_NUMBER is not set' do
-    before { ENV.delete('TEST_ENV_NUMBER') } # Make sure this doesn't exist by default
+  it 'collates' do
+    collated = described_class.collate <<~TXT
+      tests.count="2"
+      tests.failures="1"
+      tests.count="3"
+      tests.failures="2"
+      tests.skipped="1"
+    TXT
 
-    it 'correctly describes the test results', aggregate_failures: true do
-      expect(formatter_output.match(/tests.name="(\w+)"/)[1]).to eql('rspec')
-      expect(formatter_output.match(/tests.count="(\w+)"/)[1]).to eql('5')
-      expect(formatter_output.match(/tests.skipped="(\w+)"/)[1]).to eql('1')
-      expect(formatter_output.match(/tests.failures="(\w+)"/)[1]).to eql('3')
-      expect(formatter_output.match(/tests.errors="(\w+)"/)[1]).to eql('0')
-      expect(formatter_output.match(/tests.retries.count="(\w+)"/)[1]).to eql('1')
-    end
-  end
-
-  context 'TEST_ENV_NUMBER is set' do
-    around do |example|
-      ENV['TEST_ENV_NUMBER'] = '2'
-      example.call
-    ensure
-      ENV.delete('TEST_ENV_NUMBER')
-    end
-
-    it 'includes $TEST_ENV_NUMBER in the formatter_output name' do
-      expect(formatter_output.match(/tests.name="(\w+)"/)[1]).to eql('rspec2')
-    end
+    expect(collated).to eq <<~TXT.chomp
+      tests.count="5"
+      tests.failures="3"
+      tests.skipped="1"
+    TXT
   end
 end
