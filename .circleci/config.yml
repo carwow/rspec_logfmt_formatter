@@ -1,63 +1,23 @@
 version: 2.1
 
-orbs:
-  buildevents: honeycombio/buildevents@0.2
-  carwow: carwow/carwow-orb@0.3
-
-
-##
-# JOBs definitions
-##
 jobs:
-  tests:
-    executor: carwow/ruby
+  test:
+    parameters:
+      ruby:
+        type: string
+    docker:
+      - image: 'cimg/ruby:<< parameters.ruby >>'
     steps:
-      - buildevents/with_job_span:
-          steps:
-            - checkout
-            - run:
-                name: Bundle
-                command: bundle install --jobs=4 --retry=3
-
-            - run:
-                name: Running gem tests
-                command: |
-                  mkdir -p test-results/rspec;
-                  bundle exec rspec --format RspecLogfmtFormatter::Formatter --out $BUILDEVENT_FILE \
-                  --format RspecJunitFormatter  --out test-results/rspec/rspec.xml \
-                  --format progress;
-            - store_test_results:
-                path: test-results/rspec
-  lint_ruby:
-    executor: carwow/ruby
-    steps:
-      - buildevents/with_job_span:
-          steps:
-            - checkout
-            - run: bundle install --jobs=4 --retry=3
-            - run: bundle exec rubocop -p
-
-  publish_gem:
-    executor: carwow/ruby
-    steps:
-      - buildevents/with_job_span:
-          steps:
-            - checkout
-            - run: bundle install --jobs=4 --retry=3
-            - run: bundle exec rake upload
-
+      - checkout
+      - run: bundle install
+      - run: bundle exec rspec
+      - run: bundle exec standardrb
 
 workflows:
   version: 2
-  build-and-deploy:
+  test:
     jobs:
-      - carwow/start
-      - carwow/watch:
-          context: buildevents-watch
-          requires: [carwow/start]
-
-      - tests:
-          requires: [carwow/start]
-
-      - lint_ruby:
-          requires: [carwow/start]
+      - test:
+          matrix:
+            parameters:
+              ruby: ["3.4", "3.3", "3.2"]

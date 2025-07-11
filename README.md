@@ -20,7 +20,7 @@ gem install rspec_logfmt_formatter
 Use it:
 
 ```sh
-rspec --format RspecLogfmtFormatter::Formatter --out rspec.txt
+rspec --format RspecLogfmtFormatter --out rspec.txt
 ```
 
 You'll get a file `rspec.txt` with your results in it.
@@ -28,7 +28,7 @@ You'll get a file `rspec.txt` with your results in it.
 You can use it in combination with other [formatters][rspec-formatters], too:
 
 ```sh
-rspec --format progress --format RspecLogfmtFormatter::Formatter --out rspec.txt
+rspec --format progress --format RspecLogfmtFormatter --out rspec.txt
 ```
 
   [rspec-formatters]: https://relishapp.com/rspec/rspec-core/v/3-6/docs/formatters
@@ -47,19 +47,26 @@ end
 Put the same arguments as the commands above in [your `.rspec`][rspec-file]:
 
 ```sh
---format RspecLogfmtFormatter::Formatter
---out rspec.txt
+--format RspecLogfmtFormatter --out rspec.txt
 ```
   [bundler]: https://bundler.io
   [rspec-file]: https://relishapp.com/rspec/rspec-core/v/3-6/docs/configuration/read-command-line-configuration-options-from-files
 
 ### Parallel tests
 
-For use with `parallel_tests`, add `$TEST_ENV_NUMBER` in the output file option (in `.rspec` or `.rspec_parallel`) to avoid concurrent process write conflicts.
+You can sum repeated values in one file using `rspec_logfmt_formatter_collate rspec.txt`.
 
-```sh
---format RspecLogfmtFormatter::Formatter
---out tmp/rspec<%= ENV["TEST_ENV_NUMBER"] %>.txt
+It will rewrite a file like:
+
+```
+tests.count="3"
+tests.count="1"
+```
+
+into:
+
+```
+tests.count="4"
 ```
 
 ### How to push to Honeycomb
@@ -67,7 +74,7 @@ For use with `parallel_tests`, add `$TEST_ENV_NUMBER` in the output file option 
 There are many ways you can push this to honeycomb. One way is to use the [buildevents][buildevents] binary. Then output your spec output to `BUILDEVENT_FILE` e.g.
 
 ```sh
-bundle exec rspec --format RspecLogfmtFormatter::Formatter --out $BUILDEVENT_FILE
+bundle exec rspec --format RspecLogfmtFormatter --out $BUILDEVENT_FILE
 ```
 
   [buildevents]: https://github.com/honeycombio/buildevents
