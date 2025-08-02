@@ -1,8 +1,8 @@
-source 'https://rubygems.org'
+source "https://rubygems.org"
 
 gemspec
 
-gem 'carwow_rubocop'
-gem 'rake'
-gem 'rspec'
-gem 'rspec-retry'
+gem "rake"
+gem "rspec"
+gem "rspec-retry"
+gem "standard", ">= 1.50.0"

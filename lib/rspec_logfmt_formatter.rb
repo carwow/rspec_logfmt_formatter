@@ -1,5 +1,5 @@
-require 'rspec/core'
-require 'rspec/core/formatters/base_formatter'
+require "rspec/core"
+require "rspec/core/formatters/base_formatter"
 
 class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
   RSpec::Core::Formatters.register self, :dump_summary

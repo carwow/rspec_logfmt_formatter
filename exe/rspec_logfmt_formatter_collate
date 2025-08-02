@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'rspec_logfmt_formatter'
+require "rspec_logfmt_formatter"
 
 puts RspecLogfmtFormatter.collate($stdin.read)
