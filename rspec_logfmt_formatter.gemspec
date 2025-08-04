@@ -1,6 +1,6 @@
 Gem::Specification.new do |s| # rubocop:disable Gemspec/RequireMFA
   s.name = "rspec_logfmt_formatter"
-  s.version = "0.0.2"
+  s.version = "0.0.2.pre.1"
   s.platform = Gem::Platform::RUBY
   s.author = "Richard Vickerstaff"
   s.email = ["developers@carwow.co.uk"]
