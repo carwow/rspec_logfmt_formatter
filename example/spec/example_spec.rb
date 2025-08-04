@@ -1,25 +1,25 @@
-require 'spec_helper'
+require "spec_helper"
 
-describe 'ExampleSpecs' do
+describe "ExampleSpecs" do
   let(:test) { 1 }
 
-  it 'succeeds' do
+  it "succeeds" do
     expect(test).to be_an(Integer)
   end
 
-  it 'fails' do
+  it "fails" do
     expect(test).to be_a(String)
   end
 
-  it 'raises' do
+  it "raises" do # rubocop:disable RSpec/NoExpectationExample
     raise ArgumentError
   end
 
-  xit 'should be pending' do
-    pending
+  xit "pending" do # rubocop:disable RSpec/PendingWithoutReason
+    pending "pending"
   end
 
-  it 'retries', :retry_spec do
+  it "retries", :retry_spec do
     expect(test).to be_a(String)
   end
 end
