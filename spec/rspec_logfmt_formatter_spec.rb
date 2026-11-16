@@ -10,6 +10,7 @@ describe RspecLogfmtFormatter do
   let(:example_spec_output) { StringIO.new }
   let(:example_dir) { File.expand_path("../example", __dir__) }
   let(:tmp_dir) { File.expand_path("../tmp", __dir__) }
+  let(:example_env) { {"RSPEC_LOGFMT_SLOW_FILE_THRESHOLD_MS" => "200"} }
 
   after do |example|
     if example.exception
@@ -27,7 +28,7 @@ describe RspecLogfmtFormatter do
   def execute_example_spec
     FileUtils.rm_f formatter_output_file
 
-    PTY.spawn("bundle", "exec", "rspec", *formatter_arguments, chdir: example_dir) do |r, _w, pid|
+    PTY.spawn(example_env, "bundle", "exec", "rspec", *formatter_arguments, chdir: example_dir) do |r, _w, pid|
       r.each_line { |line| example_spec_output.puts(line) }
     rescue Errno::EIO
       # Command closed output, or exited
@@ -39,11 +40,26 @@ describe RspecLogfmtFormatter do
   it "correctly describes the test results", :aggregate_failures do
     execute_example_spec
 
-    expect(formatter_output).to match(/tests\.count="5"/)
+    expect(formatter_output).to match(/tests\.count="6"/)
     expect(formatter_output).to match(/tests\.skipped="1"/)
     expect(formatter_output).to match(/tests\.failures="3"/)
     expect(formatter_output).to match(/tests\.errors="0"/)
     expect(formatter_output).to match(/tests\.retries="1"/)
+  end
+
+  it "reports the slowest spec file", :aggregate_failures do
+    execute_example_spec
+
+    expect(formatter_output).to match(/tests\.slow_files="1"/)
+    expect(formatter_output).to match(%r{tests\.slowest_file="\./spec/slow_spec\.rb"})
+    expect(formatter_output[/tests\.slowest_file_ms="(\d+)"/, 1].to_i).to be >= 300
+  end
+
+  it "counts no slow files when all are under the threshold" do
+    example_env["RSPEC_LOGFMT_SLOW_FILE_THRESHOLD_MS"] = "60000"
+    execute_example_spec
+
+    expect(formatter_output).to match(/tests\.slow_files="0"/)
   end
 
   it "collates" do
@@ -59,6 +75,30 @@ describe RspecLogfmtFormatter do
       tests.count="5"
       tests.failures="3"
       tests.skipped="1"
+    TXT
+  end
+
+  it "collates the slowest file as the maximum across runs" do
+    collated = described_class.collate <<~TXT
+      tests.count="2"
+      tests.slow_files="1"
+      tests.slowest_file_ms="900"
+      tests.slowest_file="./spec/a_spec.rb"
+      tests.count="3"
+      tests.slow_files="2"
+      tests.slowest_file_ms="1500"
+      tests.slowest_file="./spec/b_spec.rb"
+      tests.count="1"
+      tests.slow_files="0"
+      tests.slowest_file_ms="100"
+      tests.slowest_file="./spec/c_spec.rb"
+    TXT
+
+    expect(collated).to eq <<~TXT.chomp
+      tests.count="6"
+      tests.slow_files="3"
+      tests.slowest_file_ms="1500"
+      tests.slowest_file="./spec/b_spec.rb"
     TXT
   end
 end

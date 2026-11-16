@@ -52,9 +52,39 @@ Put the same arguments as the commands above in [your `.rspec`][rspec-file]:
   [bundler]: https://bundler.io
   [rspec-file]: https://relishapp.com/rspec/rspec-core/v/3-6/docs/configuration/read-command-line-configuration-options-from-files
 
+### Output
+
+```
+tests.count="6"
+tests.skipped="1"
+tests.failures="3"
+tests.errors="0"
+tests.retries="1"
+tests.slow_files="1"
+tests.slowest_file_ms="48213"
+tests.slowest_file="./spec/models/deal_spec.rb"
+```
+
+`tests.retries` is only populated when using [rspec-retry][rspec-retry].
+
+### Slow spec files
+
+The formatter times each top-level example group (wall clock, including
+`before(:all)` hooks) and sums them per spec file:
+
+* `tests.slowest_file_ms` / `tests.slowest_file`: the slowest spec file and its duration in milliseconds
+* `tests.slow_files`: how many spec files took longer than the threshold
+
+The threshold defaults to 60000ms and can be set with the
+`RSPEC_LOGFMT_SLOW_FILE_THRESHOLD_MS` environment variable. These fields are
+omitted when no example groups ran.
+
+  [rspec-retry]: https://github.com/NoRedInk/rspec-retry
+
 ### Parallel tests
 
-You can sum repeated values in one file using `rspec_logfmt_formatter_collate rspec.txt`.
+You can combine the output of several runs in one file using `rspec_logfmt_formatter_collate rspec.txt`.
+Counts are summed and the slowest file is the slowest across all runs.
 
 It will rewrite a file like:
 
@@ -89,7 +119,7 @@ Currently this is a manual process and can only be run by a carwow developer.
 
 1. Ensure your `~/.gem/credentials` are correct
 2. Update the [CHANGELOG.md](./CHANGELOG.md)
-3. Update the [version.rb](./lib/rspec_logfmt_formatter/version.rb)
+3. Update the version in the [gemspec](./rspec_logfmt_formatter.gemspec)
 4. Run `bundle exec rake upload`
 5. Check the tag was pushed and the new version was released
 
