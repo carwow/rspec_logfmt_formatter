@@ -4,6 +4,7 @@
 * `tests.slowest_file`, `tests.slowest_file_ms` and `tests.slow_files` fields
 * `RSPEC_LOGFMT_SLOW_FILE_THRESHOLD_MS` to configure the slow file threshold
 * `tests.worker` field from `TEST_ENV_NUMBER` when running in parallel
+* `tests.node` field from `CIRCLE_NODE_INDEX`, kept when collating
 
 ### Changed
 * results are written on a single line per run, so parallel workers' results can't be mixed up

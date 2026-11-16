@@ -60,9 +60,15 @@ Each run writes its results on a single line:
 tests.count="6" tests.skipped="1" tests.failures="3" tests.errors="0" tests.retries="1" tests.slow_files="1" tests.slowest_file_ms="48213" tests.slowest_file="./spec/models/deal_spec.rb"
 ```
 
-When `TEST_ENV_NUMBER` is set (e.g. by [flatware][flatware] or
-[parallel_tests][parallel_tests]) the line starts with the worker number,
-`tests.worker="3"`, so each parallel worker's result is self-contained.
+When running in parallel the line starts with where it ran, so each result is
+self-contained:
+
+* `tests.node`: the CircleCI container, from `CIRCLE_NODE_INDEX`
+* `tests.worker`: the parallel worker, from `TEST_ENV_NUMBER` (set by [flatware][flatware] or [parallel_tests][parallel_tests])
+
+```
+tests.node="1" tests.worker="3" tests.count="6" ...
+```
 
   [flatware]: https://github.com/briandunn/flatware
   [parallel_tests]: https://github.com/grosser/parallel_tests
@@ -86,7 +92,10 @@ omitted when no example groups ran.
 ### Parallel tests
 
 You can combine the output of several runs in one file using `rspec_logfmt_formatter_collate rspec.txt`.
-Counts are summed and the slowest file is the slowest across all runs.
+Counts are summed, the slowest file is the slowest across all runs, `tests.node`
+is kept and `tests.worker` is dropped. Each CircleCI container collates its own
+file, so with `parallelism` each container's span carries its own results;
+combine them in Honeycomb (e.g. `MAX(tests.slowest_file_ms)` per trace).
 
 It will rewrite a file like:
 

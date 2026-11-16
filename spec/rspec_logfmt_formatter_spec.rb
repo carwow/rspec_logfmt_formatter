@@ -10,7 +10,7 @@ describe RspecLogfmtFormatter do
   let(:example_spec_output) { StringIO.new }
   let(:example_dir) { File.expand_path("../example", __dir__) }
   let(:tmp_dir) { File.expand_path("../tmp", __dir__) }
-  let(:example_env) { {"RSPEC_LOGFMT_SLOW_FILE_THRESHOLD_MS" => "200", "TEST_ENV_NUMBER" => nil} }
+  let(:example_env) { {"RSPEC_LOGFMT_SLOW_FILE_THRESHOLD_MS" => "200", "TEST_ENV_NUMBER" => nil, "CIRCLE_NODE_INDEX" => nil} }
 
   after do |example|
     if example.exception
@@ -61,6 +61,7 @@ describe RspecLogfmtFormatter do
     expect(formatter_output.lines.size).to eq(1)
     expect(formatter_output).to start_with('tests.count="6" ')
     expect(formatter_output).not_to include("tests.worker")
+    expect(formatter_output).not_to include("tests.node")
   end
 
   it "includes the parallel worker number" do
@@ -68,6 +69,14 @@ describe RspecLogfmtFormatter do
     execute_example_spec
 
     expect(formatter_output).to start_with('tests.worker="3" tests.count="6" ')
+  end
+
+  it "includes the CI node before the worker number" do
+    example_env["CIRCLE_NODE_INDEX"] = "1"
+    example_env["TEST_ENV_NUMBER"] = "3"
+    execute_example_spec
+
+    expect(formatter_output).to start_with('tests.node="1" tests.worker="3" tests.count="6" ')
   end
 
   it "treats an empty worker number as the first worker, like parallel_tests" do
@@ -112,6 +121,18 @@ describe RspecLogfmtFormatter do
       tests.slow_files="3"
       tests.slowest_file_ms="1500"
       tests.slowest_file="./spec/b_spec.rb"
+    TXT
+  end
+
+  it "keeps the CI node when collating" do
+    collated = described_class.collate <<~TXT
+      tests.node="1" tests.worker="0" tests.count="2"
+      tests.node="1" tests.worker="1" tests.count="3"
+    TXT
+
+    expect(collated).to eq <<~TXT.chomp
+      tests.node="1"
+      tests.count="5"
     TXT
   end
 

@@ -15,8 +15,8 @@ class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
   # per line.
   #
   # Each line of input is one run's result. Counts are summed, the slowest file
-  # is the one with the largest duration across all runs, and the worker number
-  # is dropped.
+  # is the one with the largest duration across all runs, the CI node is kept
+  # (every run in one file shares it) and the worker number is dropped.
   def self.collate(input)
     collated = {}
 
@@ -25,6 +25,8 @@ class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
         case key
         when "tests.worker", "tests.slowest_file"
           next
+        when "tests.node"
+          collated[key] ||= value
         when "tests.slowest_file_ms"
           if collated[key].nil? || value.to_i > collated[key].to_i
             collated[key] = value
@@ -83,7 +85,15 @@ class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
   # One line per run, so parallel workers appending to the same file each
   # write a single, self-contained record.
   def logfmt_dump
-    output.puts (worker_fields + summary_fields + slow_file_fields).join(" ")
+    output.puts (node_fields + worker_fields + summary_fields + slow_file_fields).join(" ")
+  end
+
+  # The CircleCI container, when the job runs with parallelism.
+  def node_fields
+    node = ENV["CIRCLE_NODE_INDEX"]
+    return [] if node.nil? || node.empty?
+
+    [%(tests.node="#{node}")]
   end
 
   # The parallel worker number, from flatware or parallel_tests (which uses
