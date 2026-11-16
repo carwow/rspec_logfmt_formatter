@@ -10,13 +10,6 @@ class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
   SLOW_FILE_THRESHOLD_ENV = "RSPEC_LOGFMT_SLOW_FILE_THRESHOLD_MS"
   DEFAULT_SLOW_FILE_THRESHOLD_MS = 60_000
 
-  # Combines the output of several formatter runs (e.g. parallel test
-  # processes appending to the same file) into one set of totals, one field
-  # per line.
-  #
-  # Each line of input is one run's result. Counts are summed, the slowest file
-  # is the one with the largest duration across all runs, the CI node is kept
-  # (every run in one file shares it) and the worker number is dropped.
   def self.collate(input)
     collated = {}
 
@@ -41,7 +34,6 @@ class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
     collated.map { |key, value| %(#{key}="#{value}") }.join("\n")
   end
 
-  # One record per line of input that has any tests.* fields.
   def self.parse_records(input)
     input.each_line
       .map { |line| line.scan(/(?:\A|\s)(tests\.[\w.]+)="([^"]*)"/).to_h }
@@ -75,20 +67,16 @@ class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
     logfmt_dump
   end
 
-  # Called by rspec-retry on every formatter that responds to it.
   def retry(example)
     @retries << example
   end
 
   private
 
-  # One line per run, so parallel workers appending to the same file each
-  # write a single, self-contained record.
   def logfmt_dump
     output.puts (node_fields + worker_fields + summary_fields + slow_file_fields).join(" ")
   end
 
-  # The CircleCI container, when the job runs with parallelism.
   def node_fields
     node = ENV["CIRCLE_NODE_INDEX"]
     return [] if node.nil? || node.empty?
@@ -96,8 +84,6 @@ class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
     [%(tests.node="#{node}")]
   end
 
-  # The parallel worker number, from flatware or parallel_tests (which uses
-  # "" for its first process).
   def worker_fields
     worker = ENV["TEST_ENV_NUMBER"]
     return [] if worker.nil?
