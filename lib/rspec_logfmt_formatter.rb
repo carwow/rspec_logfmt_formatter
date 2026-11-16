@@ -11,18 +11,19 @@ class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
   DEFAULT_SLOW_FILE_THRESHOLD_MS = 60_000
 
   # Combines the output of several formatter runs (e.g. parallel test
-  # processes appending to the same file) into one set of totals.
+  # processes appending to the same file) into one set of totals, one field
+  # per line.
   #
-  # Each run's output is one record. Counts are summed, the slowest file is the
-  # one with the largest duration across all records.
+  # Each line of input is one run's result. Counts are summed, the slowest file
+  # is the one with the largest duration across all runs, and the worker number
+  # is dropped.
   def self.collate(input)
-    records = parse_records(input)
     collated = {}
 
-    records.each do |record|
+    parse_records(input).each do |record|
       record.each do |key, value|
         case key
-        when "tests.slowest_file"
+        when "tests.worker", "tests.slowest_file"
           next
         when "tests.slowest_file_ms"
           if collated[key].nil? || value.to_i > collated[key].to_i
@@ -38,17 +39,11 @@ class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
     collated.map { |key, value| %(#{key}="#{value}") }.join("\n")
   end
 
-  # Splits the input into records, one per formatter run. A new record starts
-  # whenever a key repeats within the current one.
+  # One record per line of input that has any tests.* fields.
   def self.parse_records(input)
-    records = [{}]
-
-    input.scan(/^(tests\.[\w.]+)="([^"]*)"/) do |key, value|
-      records << {} if records.last.key?(key)
-      records.last[key] = value
-    end
-
-    records.reject(&:empty?)
+    input.each_line
+      .map { |line| line.scan(/(?:\A|\s)(tests\.[\w.]+)="([^"]*)"/).to_h }
+      .reject(&:empty?)
   end
   private_class_method :parse_records
 
@@ -85,11 +80,23 @@ class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
 
   private
 
+  # One line per run, so parallel workers appending to the same file each
+  # write a single, self-contained record.
   def logfmt_dump
-    output.puts (summary_lines + slow_file_lines).join("\n")
+    output.puts (worker_fields + summary_fields + slow_file_fields).join(" ")
   end
 
-  def summary_lines
+  # The parallel worker number, from flatware or parallel_tests (which uses
+  # "" for its first process).
+  def worker_fields
+    worker = ENV["TEST_ENV_NUMBER"]
+    return [] if worker.nil?
+
+    worker = "1" if worker.empty?
+    [%(tests.worker="#{worker}")]
+  end
+
+  def summary_fields
     [
       %(tests.count="#{@summary.example_count}"),
       %(tests.skipped="#{@summary.pending_count}"),
@@ -99,7 +106,7 @@ class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
     ]
   end
 
-  def slow_file_lines
+  def slow_file_fields
     return [] if @file_durations_ms.empty?
 
     slowest_file, slowest_ms = @file_durations_ms.max_by { |_file, ms| ms }

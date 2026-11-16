@@ -10,7 +10,7 @@ describe RspecLogfmtFormatter do
   let(:example_spec_output) { StringIO.new }
   let(:example_dir) { File.expand_path("../example", __dir__) }
   let(:tmp_dir) { File.expand_path("../tmp", __dir__) }
-  let(:example_env) { {"RSPEC_LOGFMT_SLOW_FILE_THRESHOLD_MS" => "200"} }
+  let(:example_env) { {"RSPEC_LOGFMT_SLOW_FILE_THRESHOLD_MS" => "200", "TEST_ENV_NUMBER" => nil} }
 
   after do |example|
     if example.exception
@@ -55,6 +55,28 @@ describe RspecLogfmtFormatter do
     expect(formatter_output[/tests\.slowest_file_ms="(\d+)"/, 1].to_i).to be >= 300
   end
 
+  it "writes the results on a single line" do
+    execute_example_spec
+
+    expect(formatter_output.lines.size).to eq(1)
+    expect(formatter_output).to start_with('tests.count="6" ')
+    expect(formatter_output).not_to include("tests.worker")
+  end
+
+  it "includes the parallel worker number" do
+    example_env["TEST_ENV_NUMBER"] = "3"
+    execute_example_spec
+
+    expect(formatter_output).to start_with('tests.worker="3" tests.count="6" ')
+  end
+
+  it "treats an empty worker number as the first worker, like parallel_tests" do
+    example_env["TEST_ENV_NUMBER"] = ""
+    execute_example_spec
+
+    expect(formatter_output).to start_with('tests.worker="1" ')
+  end
+
   it "counts no slow files when all are under the threshold" do
     example_env["RSPEC_LOGFMT_SLOW_FILE_THRESHOLD_MS"] = "60000"
     execute_example_spec
@@ -78,20 +100,11 @@ describe RspecLogfmtFormatter do
     TXT
   end
 
-  it "collates the slowest file as the maximum across runs" do
+  it "collates one line per worker, keeping the slowest file with its duration" do
     collated = described_class.collate <<~TXT
-      tests.count="2"
-      tests.slow_files="1"
-      tests.slowest_file_ms="900"
-      tests.slowest_file="./spec/a_spec.rb"
-      tests.count="3"
-      tests.slow_files="2"
-      tests.slowest_file_ms="1500"
-      tests.slowest_file="./spec/b_spec.rb"
-      tests.count="1"
-      tests.slow_files="0"
-      tests.slowest_file_ms="100"
-      tests.slowest_file="./spec/c_spec.rb"
+      tests.worker="1" tests.count="2" tests.slow_files="1" tests.slowest_file_ms="900" tests.slowest_file="./spec/a_spec.rb"
+      tests.worker="2" tests.count="3" tests.slow_files="2" tests.slowest_file_ms="1500" tests.slowest_file="./spec/b_spec.rb"
+      tests.worker="3" tests.count="1" tests.slow_files="0" tests.slowest_file_ms="100" tests.slowest_file="./spec/c_spec.rb"
     TXT
 
     expect(collated).to eq <<~TXT.chomp
@@ -99,6 +112,20 @@ describe RspecLogfmtFormatter do
       tests.slow_files="3"
       tests.slowest_file_ms="1500"
       tests.slowest_file="./spec/b_spec.rb"
+    TXT
+  end
+
+  it "collates workers that ran no example groups" do
+    collated = described_class.collate <<~TXT
+      tests.worker="1" tests.count="0" tests.failures="0"
+      tests.worker="2" tests.count="4" tests.failures="1" tests.slowest_file_ms="700" tests.slowest_file="./spec/a_spec.rb"
+    TXT
+
+    expect(collated).to eq <<~TXT.chomp
+      tests.count="4"
+      tests.failures="1"
+      tests.slowest_file_ms="700"
+      tests.slowest_file="./spec/a_spec.rb"
     TXT
   end
 end

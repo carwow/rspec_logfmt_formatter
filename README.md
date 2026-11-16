@@ -54,16 +54,18 @@ Put the same arguments as the commands above in [your `.rspec`][rspec-file]:
 
 ### Output
 
+Each run writes its results on a single line:
+
 ```
-tests.count="6"
-tests.skipped="1"
-tests.failures="3"
-tests.errors="0"
-tests.retries="1"
-tests.slow_files="1"
-tests.slowest_file_ms="48213"
-tests.slowest_file="./spec/models/deal_spec.rb"
+tests.count="6" tests.skipped="1" tests.failures="3" tests.errors="0" tests.retries="1" tests.slow_files="1" tests.slowest_file_ms="48213" tests.slowest_file="./spec/models/deal_spec.rb"
 ```
+
+When `TEST_ENV_NUMBER` is set (e.g. by [flatware][flatware] or
+[parallel_tests][parallel_tests]) the line starts with the worker number,
+`tests.worker="3"`, so each parallel worker's result is self-contained.
+
+  [flatware]: https://github.com/briandunn/flatware
+  [parallel_tests]: https://github.com/grosser/parallel_tests
 
 `tests.retries` is only populated when using [rspec-retry][rspec-retry].
 
@@ -89,14 +91,16 @@ Counts are summed and the slowest file is the slowest across all runs.
 It will rewrite a file like:
 
 ```
-tests.count="3"
-tests.count="1"
+tests.worker="1" tests.count="3" tests.slowest_file_ms="900" tests.slowest_file="./spec/a_spec.rb"
+tests.worker="2" tests.count="1" tests.slowest_file_ms="1500" tests.slowest_file="./spec/b_spec.rb"
 ```
 
 into:
 
 ```
 tests.count="4"
+tests.slowest_file_ms="1500"
+tests.slowest_file="./spec/b_spec.rb"
 ```
 
 ### How to push to Honeycomb

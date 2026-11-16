@@ -3,8 +3,11 @@
 ### Added
 * `tests.slowest_file`, `tests.slowest_file_ms` and `tests.slow_files` fields
 * `RSPEC_LOGFMT_SLOW_FILE_THRESHOLD_MS` to configure the slow file threshold
+* `tests.worker` field from `TEST_ENV_NUMBER` when running in parallel
 
 ### Changed
+* results are written on a single line per run, so parallel workers' results can't be mixed up
+* `rspec_logfmt_formatter_collate` treats each line as one run's result and drops `tests.worker`
 * `rspec_logfmt_formatter_collate` takes the maximum of `tests.slowest_file_ms` (and its file) instead of summing
 
 ### Deprecated
