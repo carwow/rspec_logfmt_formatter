@@ -54,63 +54,90 @@ Put the same arguments as the commands above in [your `.rspec`][rspec-file]:
 
 ### Output
 
-Each run writes its results on a single line:
+Each run writes one field per line:
 
 ```
-tests.count="6" tests.skipped="1" tests.failures="3" tests.errors="0" tests.retries="1" tests.slow_files="1" tests.slowest_file_ms="48213" tests.slowest_file="./spec/models/deal_spec.rb"
+tests.slowest_file="./spec/models/deal_spec.rb"
+tests.slowest_file_ms="48213"
+tests.count="6"
+tests.skipped="1"
+tests.failures="3"
+tests.errors="0"
+tests.retries="1"
 ```
 
-When running in parallel the line starts with where it ran, so each result is
-self-contained:
+`tests.retries` is only populated when using [rspec-retry][rspec-retry].
 
-* `tests.node`: the CircleCI container, from `CIRCLE_NODE_INDEX`
-* `tests.worker`: the parallel worker, from `TEST_ENV_NUMBER` (set by [flatware][flatware] or [parallel_tests][parallel_tests])
+  [rspec-retry]: https://github.com/NoRedInk/rspec-retry
+
+When running in parallel, every field is prefixed with where it ran, so each
+worker's results stay distinct in a shared file:
+
+* the parallel worker, from `TEST_ENV_NUMBER` (set by [flatware][flatware] or [parallel_tests][parallel_tests]).
+  An empty `TEST_ENV_NUMBER`, which parallel_tests uses for its first worker, is treated as `1`
+* the CircleCI container, from `CIRCLE_NODE_INDEX`, joined to the worker as `<node>-<worker>`.
+  It is only used together with `TEST_ENV_NUMBER`
 
 ```
-tests.node="1" tests.worker="3" tests.count="6" ...
+tests.3.count="6"       # TEST_ENV_NUMBER=3
+tests.1-3.count="6"     # CIRCLE_NODE_INDEX=1 TEST_ENV_NUMBER=3
 ```
 
   [flatware]: https://github.com/briandunn/flatware
   [parallel_tests]: https://github.com/grosser/parallel_tests
 
-`tests.retries` is only populated when using [rspec-retry][rspec-retry].
-
 ### Slow spec files
 
 The formatter times each top-level example group (wall clock, including
-`before(:all)` hooks) and sums them per spec file:
+`before(:all)` hooks) and sums them per spec file. It reports the slowest one:
 
-* `tests.slowest_file_ms` / `tests.slowest_file`: the slowest spec file and its duration in milliseconds
-* `tests.slow_files`: how many spec files took longer than the threshold
+* `tests.slowest_file`: the path of the slowest spec file
+* `tests.slowest_file_ms`: its duration in milliseconds
 
-The threshold defaults to 60000ms and can be set with the
-`RSPEC_LOGFMT_SLOW_FILE_THRESHOLD_MS` environment variable. These fields are
-omitted when no example groups ran.
-
-  [rspec-retry]: https://github.com/NoRedInk/rspec-retry
+These fields are omitted when no example groups ran.
 
 ### Parallel tests
 
 You can combine the output of several runs in one file using `rspec_logfmt_formatter_collate rspec.txt`.
-Counts are summed, the slowest file is the slowest across all runs, `tests.node`
-is kept and `tests.worker` is dropped. Each CircleCI container collates its own
-file, so with `parallelism` each container's span carries its own results;
-combine them in Honeycomb (e.g. `MAX(tests.slowest_file_ms)` per trace).
+`tests.count`, `tests.errors`, `tests.failures`, `tests.retries` and
+`tests.skipped` are summed, and the slowest file is the slowest across all runs,
+reported with its own duration. The worker and node prefixes are dropped. Each
+CircleCI container collates its own file, so with `parallelism` each
+container's span carries its own results; combine them in Honeycomb (e.g.
+`MAX(tests.slowest_file_ms)` per trace).
 
 It will rewrite a file like:
 
 ```
-tests.worker="1" tests.count="3" tests.slowest_file_ms="900" tests.slowest_file="./spec/a_spec.rb"
-tests.worker="2" tests.count="1" tests.slowest_file_ms="1500" tests.slowest_file="./spec/b_spec.rb"
+tests.1.slowest_file="./spec/a_spec.rb"
+tests.1.slowest_file_ms="900"
+tests.1.count="3"
+tests.1.skipped="1"
+tests.1.failures="0"
+tests.1.errors="0"
+tests.1.retries="0"
+tests.2.slowest_file="./spec/b_spec.rb"
+tests.2.slowest_file_ms="1500"
+tests.2.count="1"
+tests.2.skipped="0"
+tests.2.failures="1"
+tests.2.errors="0"
+tests.2.retries="0"
 ```
 
 into:
 
 ```
 tests.count="4"
-tests.slowest_file_ms="1500"
+tests.errors="0"
+tests.failures="1"
+tests.retries="0"
+tests.skipped="1"
 tests.slowest_file="./spec/b_spec.rb"
+tests.slowest_file_ms="1500"
 ```
+
+`tests.slowest_file` and `tests.slowest_file_ms` are left out when no run reported a slowest file.
 
 ### How to push to Honeycomb
 
