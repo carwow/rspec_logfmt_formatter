@@ -7,37 +7,31 @@ class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
     :example_group_started,
     :example_group_finished
 
+  COUNTERS = %w[count errors failures retries skipped].freeze
+  SLOWEST_FIELDS = %w[slowest_file slowest_file_ms].freeze
+
   def self.collate(input)
-    totals = {"count" => 0, "errors" => 0, "failures" => 0, "retries" => 0, "skipped" => 0}
-    pending_file_per_worker = {}
-    slowest_file = nil
-    slowest_ms = nil
+    totals = COUNTERS.to_h { |counter| [counter, 0] }
+    pending = Hash.new { |hash, worker| hash[worker] = {} }
+    slowest = []
 
     input.scan(/tests((?:\.[\w-]+)?)\.(\w+)="([^"]+)"/) do |worker, field, value|
-      case field
-      when "count", "errors", "failures", "retries", "skipped"
+      if totals.key?(field)
         totals[field] += value.to_i
-      when "slowest_file"
-        pending_file_per_worker[worker] = value
-      when "slowest_file_ms"
-        file = pending_file_per_worker[worker]
-        next unless file
+      elsif SLOWEST_FIELDS.include?(field)
+        # Pair a worker's file and duration in whichever order they arrive
+        pair = pending[worker]
+        pair[field] = value
+        next unless pair.size == 2
 
-        ms = value.to_i
-        if slowest_ms.nil? || ms > slowest_ms
-          slowest_ms = ms
-          slowest_file = file
-        end
+        pending.delete(worker)
+        slowest << [pair["slowest_file"], pair["slowest_file_ms"].to_i]
       end
     end
 
-    fields = totals.map { |field, total| %(tests.#{field}="#{total}") }
-
-    if slowest_file
-      fields << %(tests.slowest_file="#{slowest_file}")
-      fields << %(tests.slowest_file_ms="#{slowest_ms}")
-    end
-
+    file, ms = slowest.max_by(&:last) # first wins on ties
+    fields = totals.map { |counter, total| %(tests.#{counter}="#{total}") }
+    fields.push(%(tests.slowest_file="#{file}"), %(tests.slowest_file_ms="#{ms}")) if file
     fields.join("\n")
   end
 

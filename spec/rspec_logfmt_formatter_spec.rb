@@ -200,6 +200,17 @@ describe RspecLogfmtFormatter do
       expect(collated).to include(%(tests.slowest_file="./spec/a_spec.rb"\ntests.slowest_file_ms="800"))
     end
 
+    it "pairs a worker's file and duration whichever order they appear in" do
+      collated = described_class.collate <<~TXT
+        tests.1.slowest_file_ms="800"
+        tests.1.slowest_file="./spec/a_spec.rb"
+        tests.2.slowest_file="./spec/b_spec.rb"
+        tests.2.slowest_file_ms="400"
+      TXT
+
+      expect(collated).to include(%(tests.slowest_file="./spec/a_spec.rb"\ntests.slowest_file_ms="800"))
+    end
+
     it "keeps the first file seen when durations tie" do
       collated = described_class.collate <<~TXT
         tests.1.slowest_file="./spec/a_spec.rb"
