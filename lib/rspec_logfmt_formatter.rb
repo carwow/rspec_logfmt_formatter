@@ -8,18 +8,18 @@ class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
     :example_group_finished
 
   def self.collate(input)
-    totals = { 'count' => 0, 'errors' => 0, 'failures' => 0, 'retries' => 0, 'skipped' => 0 }
+    totals = {"count" => 0, "errors" => 0, "failures" => 0, "retries" => 0, "skipped" => 0}
     pending_file_per_worker = {}
     slowest_file = nil
     slowest_ms = nil
 
     input.scan(/tests((?:\.[\w-]+)?)\.(\w+)="([^"]+)"/) do |worker, field, value|
       case field
-      when 'count', 'errors', 'failures', 'retries', 'skipped'
+      when "count", "errors", "failures", "retries", "skipped"
         totals[field] += value.to_i
-      when 'slowest_file'
+      when "slowest_file"
         pending_file_per_worker[worker] = value
-      when 'slowest_file_ms'
+      when "slowest_file_ms"
         file = pending_file_per_worker[worker]
         next unless file
 
