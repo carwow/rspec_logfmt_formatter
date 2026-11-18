@@ -10,7 +10,14 @@ describe RspecLogfmtFormatter do
   let(:example_spec_output) { StringIO.new }
   let(:example_dir) { File.expand_path("../example", __dir__) }
   let(:tmp_dir) { File.expand_path("../tmp", __dir__) }
-  let(:example_env) { {"RSPEC_LOGFMT_SLOW_FILE_THRESHOLD_MS" => "200", "TEST_ENV_NUMBER" => nil, "CIRCLE_NODE_INDEX" => nil} }
+  let(:test_env_number) { nil }
+  let(:circle_node_index) { nil }
+  let(:example_env) do
+    {
+      "TEST_ENV_NUMBER" => test_env_number,
+      "CIRCLE_NODE_INDEX" => circle_node_index
+    }
+  end
 
   after do |example|
     if example.exception
@@ -37,116 +44,253 @@ describe RspecLogfmtFormatter do
     end
   end
 
-  it "correctly describes the test results", :aggregate_failures do
-    execute_example_spec
+  describe "formatter output" do
+    context "when not running in parallel" do
+      before { execute_example_spec }
 
-    expect(formatter_output).to match(/tests\.count="6"/)
-    expect(formatter_output).to match(/tests\.skipped="1"/)
-    expect(formatter_output).to match(/tests\.failures="3"/)
-    expect(formatter_output).to match(/tests\.errors="0"/)
-    expect(formatter_output).to match(/tests\.retries="1"/)
+      it "writes one field per line, slowest file first, under the bare tests prefix" do
+        expect(formatter_output).to match(
+          /\A
+          tests\.slowest_file="\.\/spec\/slow_spec\.rb"\n
+          tests\.slowest_file_ms="\d+"\n
+          tests\.count="6"\n
+          tests\.skipped="1"\n
+          tests\.failures="3"\n
+          tests\.errors="0"\n
+          tests\.retries="1"\n
+          \z/x
+        )
+      end
+
+      it "reports the duration of the slowest spec file in milliseconds" do
+        slowest_ms = formatter_output[/tests\.slowest_file_ms="(\d+)"/, 1].to_i
+
+        # slow_spec.rb sleeps for 300ms in a before(:all)
+        expect(slowest_ms).to be >= 300
+      end
+    end
+
+    context "when running under a parallel worker" do
+      let(:test_env_number) { "3" }
+
+      it "prefixes every field with the worker number" do
+        execute_example_spec
+
+        expect(formatter_output.lines).to all(start_with("tests.3."))
+        expect(formatter_output).to include(%(tests.3.slowest_file="./spec/slow_spec.rb"))
+        expect(formatter_output).to include(%(tests.3.count="6"))
+      end
+    end
+
+    context "when running as the first parallel_tests worker, which leaves TEST_ENV_NUMBER empty" do
+      let(:test_env_number) { "" }
+
+      it "treats it as worker 1" do
+        execute_example_spec
+
+        expect(formatter_output.lines).to all(start_with("tests.1."))
+      end
+
+      it "produces output that still collates" do
+        execute_example_spec
+
+        expect(described_class.collate(formatter_output)).to include(%(tests.count="6"))
+      end
+    end
+
+    context "when running under a parallel worker on a CI node" do
+      let(:test_env_number) { "3" }
+      let(:circle_node_index) { "1" }
+
+      it "prefixes every field with the node and worker number" do
+        execute_example_spec
+
+        expect(formatter_output.lines).to all(start_with("tests.1-3."))
+        expect(formatter_output).to include(%(tests.1-3.slowest_file="./spec/slow_spec.rb"))
+        expect(formatter_output).to include(%(tests.1-3.count="6"))
+      end
+    end
+
+    context "when on a CI node without a parallel worker" do
+      let(:circle_node_index) { "1" }
+
+      it "ignores the node and uses the bare tests prefix" do
+        execute_example_spec
+
+        expect(formatter_output.lines).to all(match(/\Atests\.[a-z_]+="/))
+      end
+    end
+
+    it "produces output that collates back to the same totals and slowest file" do
+      execute_example_spec
+
+      collated = described_class.collate(formatter_output)
+
+      expect(collated).to match(
+        /\A
+        tests\.count="6"\n
+        tests\.errors="0"\n
+        tests\.failures="3"\n
+        tests\.retries="1"\n
+        tests\.skipped="1"\n
+        tests\.slowest_file="\.\/spec\/slow_spec\.rb"\n
+        tests\.slowest_file_ms="\d+"
+        \z/x
+      )
+    end
   end
 
-  it "reports the slowest spec file", :aggregate_failures do
-    execute_example_spec
+  describe ".collate" do
+    it "sums the counters across workers, omitting the slowest fields when none were reported" do
+      collated = described_class.collate <<~TXT
+        tests.1.count="2"
+        tests.1.skipped="1"
+        tests.1.errors="0"
+        tests.1.failures="1"
+        tests.1.retries="1"
+        tests.2.count="3"
+        tests.2.skipped="0"
+        tests.2.errors="1"
+        tests.2.failures="2"
+        tests.2.retries="0"
+      TXT
 
-    expect(formatter_output).to match(/tests\.slow_files="1"/)
-    expect(formatter_output).to match(%r{tests\.slowest_file="\./spec/slow_spec\.rb"})
-    expect(formatter_output[/tests\.slowest_file_ms="(\d+)"/, 1].to_i).to be >= 300
-  end
+      expect(collated).to eq <<~TXT.chomp
+        tests.count="5"
+        tests.errors="1"
+        tests.failures="3"
+        tests.retries="1"
+        tests.skipped="1"
+      TXT
+    end
 
-  it "writes the results on a single line" do
-    execute_example_spec
+    it "keeps the slowest file across workers along with its own duration" do
+      collated = described_class.collate <<~TXT
+        tests.1.slowest_file="./spec/a_spec.rb"
+        tests.1.slowest_file_ms="900"
+        tests.1.count="2"
+        tests.2.slowest_file="./spec/b_spec.rb"
+        tests.2.slowest_file_ms="1500"
+        tests.2.count="3"
+        tests.3.slowest_file="./spec/c_spec.rb"
+        tests.3.slowest_file_ms="100"
+        tests.3.count="1"
+      TXT
 
-    expect(formatter_output.lines.size).to eq(1)
-    expect(formatter_output).to start_with('tests.count="6" ')
-    expect(formatter_output).not_to include("tests.worker")
-    expect(formatter_output).not_to include("tests.node")
-  end
+      expect(collated).to eq <<~TXT.chomp
+        tests.count="6"
+        tests.errors="0"
+        tests.failures="0"
+        tests.retries="0"
+        tests.skipped="0"
+        tests.slowest_file="./spec/b_spec.rb"
+        tests.slowest_file_ms="1500"
+      TXT
+    end
 
-  it "includes the parallel worker number" do
-    example_env["TEST_ENV_NUMBER"] = "3"
-    execute_example_spec
+    it "pairs each duration with its own worker's file when workers' output is interleaved" do
+      collated = described_class.collate <<~TXT
+        tests.1.slowest_file="./spec/a_spec.rb"
+        tests.2.slowest_file="./spec/b_spec.rb"
+        tests.2.slowest_file_ms="400"
+        tests.1.slowest_file_ms="800"
+      TXT
 
-    expect(formatter_output).to start_with('tests.worker="3" tests.count="6" ')
-  end
+      expect(collated).to include(%(tests.slowest_file="./spec/a_spec.rb"\ntests.slowest_file_ms="800"))
+    end
 
-  it "includes the CI node before the worker number" do
-    example_env["CIRCLE_NODE_INDEX"] = "1"
-    example_env["TEST_ENV_NUMBER"] = "3"
-    execute_example_spec
+    it "keeps the first file seen when durations tie" do
+      collated = described_class.collate <<~TXT
+        tests.1.slowest_file="./spec/a_spec.rb"
+        tests.1.slowest_file_ms="500"
+        tests.2.slowest_file="./spec/b_spec.rb"
+        tests.2.slowest_file_ms="500"
+      TXT
 
-    expect(formatter_output).to start_with('tests.node="1" tests.worker="3" tests.count="6" ')
-  end
+      expect(collated).to include(%(tests.slowest_file="./spec/a_spec.rb"))
+    end
 
-  it "treats an empty worker number as the first worker, like parallel_tests" do
-    example_env["TEST_ENV_NUMBER"] = ""
-    execute_example_spec
+    it "collates workers prefixed with a CI node" do
+      collated = described_class.collate <<~TXT
+        tests.0-1.slowest_file="./spec/a_spec.rb"
+        tests.0-1.slowest_file_ms="700"
+        tests.0-1.count="2"
+        tests.1-1.slowest_file="./spec/b_spec.rb"
+        tests.1-1.slowest_file_ms="300"
+        tests.1-1.count="3"
+      TXT
 
-    expect(formatter_output).to start_with('tests.worker="1" ')
-  end
+      expect(collated).to eq <<~TXT.chomp
+        tests.count="5"
+        tests.errors="0"
+        tests.failures="0"
+        tests.retries="0"
+        tests.skipped="0"
+        tests.slowest_file="./spec/a_spec.rb"
+        tests.slowest_file_ms="700"
+      TXT
+    end
 
-  it "counts no slow files when all are under the threshold" do
-    example_env["RSPEC_LOGFMT_SLOW_FILE_THRESHOLD_MS"] = "60000"
-    execute_example_spec
+    it "collates output from a run that was not parallelised" do
+      collated = described_class.collate <<~TXT
+        tests.slowest_file="./spec/a_spec.rb"
+        tests.slowest_file_ms="250"
+        tests.count="4"
+        tests.failures="1"
+      TXT
 
-    expect(formatter_output).to match(/tests\.slow_files="0"/)
-  end
+      expect(collated).to eq <<~TXT.chomp
+        tests.count="4"
+        tests.errors="0"
+        tests.failures="1"
+        tests.retries="0"
+        tests.skipped="0"
+        tests.slowest_file="./spec/a_spec.rb"
+        tests.slowest_file_ms="250"
+      TXT
+    end
 
-  it "collates" do
-    collated = described_class.collate <<~TXT
-      tests.count="2"
-      tests.failures="1"
-      tests.count="3"
-      tests.failures="2"
-      tests.skipped="1"
-    TXT
+    it "collates workers that ran no example groups and so report no slowest file" do
+      collated = described_class.collate <<~TXT
+        tests.1.count="0"
+        tests.1.failures="0"
+        tests.2.slowest_file="./spec/a_spec.rb"
+        tests.2.slowest_file_ms="700"
+        tests.2.count="4"
+        tests.2.failures="1"
+      TXT
 
-    expect(collated).to eq <<~TXT.chomp
-      tests.count="5"
-      tests.failures="3"
-      tests.skipped="1"
-    TXT
-  end
+      expect(collated).to eq <<~TXT.chomp
+        tests.count="4"
+        tests.errors="0"
+        tests.failures="1"
+        tests.retries="0"
+        tests.skipped="0"
+        tests.slowest_file="./spec/a_spec.rb"
+        tests.slowest_file_ms="700"
+      TXT
+    end
 
-  it "collates one line per worker, keeping the slowest file with its duration" do
-    collated = described_class.collate <<~TXT
-      tests.worker="1" tests.count="2" tests.slow_files="1" tests.slowest_file_ms="900" tests.slowest_file="./spec/a_spec.rb"
-      tests.worker="2" tests.count="3" tests.slow_files="2" tests.slowest_file_ms="1500" tests.slowest_file="./spec/b_spec.rb"
-      tests.worker="3" tests.count="1" tests.slow_files="0" tests.slowest_file_ms="100" tests.slowest_file="./spec/c_spec.rb"
-    TXT
+    it "ignores a duration with no file reported for that worker" do
+      collated = described_class.collate <<~TXT
+        tests.1.slowest_file_ms="9999"
+        tests.2.slowest_file="./spec/a_spec.rb"
+        tests.2.slowest_file_ms="100"
+      TXT
 
-    expect(collated).to eq <<~TXT.chomp
-      tests.count="6"
-      tests.slow_files="3"
-      tests.slowest_file_ms="1500"
-      tests.slowest_file="./spec/b_spec.rb"
-    TXT
-  end
+      expect(collated).to include(%(tests.slowest_file="./spec/a_spec.rb"\ntests.slowest_file_ms="100"))
+    end
 
-  it "keeps the CI node when collating" do
-    collated = described_class.collate <<~TXT
-      tests.node="1" tests.worker="0" tests.count="2"
-      tests.node="1" tests.worker="1" tests.count="3"
-    TXT
+    it "returns zeroed counters and no slowest fields for empty input" do
+      collated = described_class.collate("")
 
-    expect(collated).to eq <<~TXT.chomp
-      tests.node="1"
-      tests.count="5"
-    TXT
-  end
-
-  it "collates workers that ran no example groups" do
-    collated = described_class.collate <<~TXT
-      tests.worker="1" tests.count="0" tests.failures="0"
-      tests.worker="2" tests.count="4" tests.failures="1" tests.slowest_file_ms="700" tests.slowest_file="./spec/a_spec.rb"
-    TXT
-
-    expect(collated).to eq <<~TXT.chomp
-      tests.count="4"
-      tests.failures="1"
-      tests.slowest_file_ms="700"
-      tests.slowest_file="./spec/a_spec.rb"
-    TXT
+      expect(collated).to eq <<~TXT.chomp
+        tests.count="0"
+        tests.errors="0"
+        tests.failures="0"
+        tests.retries="0"
+        tests.skipped="0"
+      TXT
+    end
   end
 end

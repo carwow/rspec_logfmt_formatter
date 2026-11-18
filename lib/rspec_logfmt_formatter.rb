@@ -7,39 +7,39 @@ class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
     :example_group_started,
     :example_group_finished
 
-  SLOW_FILE_THRESHOLD_ENV = "RSPEC_LOGFMT_SLOW_FILE_THRESHOLD_MS"
-  DEFAULT_SLOW_FILE_THRESHOLD_MS = 60_000
-
   def self.collate(input)
-    collated = {}
+    totals = { 'count' => 0, 'errors' => 0, 'failures' => 0, 'retries' => 0, 'skipped' => 0 }
+    pending_file_per_worker = {}
+    slowest_file = nil
+    slowest_ms = nil
 
-    parse_records(input).each do |record|
-      record.each do |key, value|
-        case key
-        when "tests.worker", "tests.slowest_file"
-          next
-        when "tests.node"
-          collated[key] ||= value
-        when "tests.slowest_file_ms"
-          if collated[key].nil? || value.to_i > collated[key].to_i
-            collated[key] = value
-            collated["tests.slowest_file"] = record["tests.slowest_file"] if record.key?("tests.slowest_file")
-          end
-        else
-          collated[key] = (collated[key].to_i + value.to_i).to_s
+    input.scan(/tests((?:\.[\w-]+)?)\.(\w+)="([^"]+)"/) do |worker, field, value|
+      case field
+      when 'count', 'errors', 'failures', 'retries', 'skipped'
+        totals[field] += value.to_i
+      when 'slowest_file'
+        pending_file_per_worker[worker] = value
+      when 'slowest_file_ms'
+        file = pending_file_per_worker[worker]
+        next unless file
+
+        ms = value.to_i
+        if slowest_ms.nil? || ms > slowest_ms
+          slowest_ms = ms
+          slowest_file = file
         end
       end
     end
 
-    collated.map { |key, value| %(#{key}="#{value}") }.join("\n")
-  end
+    fields = totals.map { |field, total| %(tests.#{field}="#{total}") }
 
-  def self.parse_records(input)
-    input.each_line
-      .map { |line| line.scan(/(?:\A|\s)(tests\.[\w.]+)="([^"]*)"/).to_h }
-      .reject(&:empty?)
+    if slowest_file
+      fields << %(tests.slowest_file="#{slowest_file}")
+      fields << %(tests.slowest_file_ms="#{slowest_ms}")
+    end
+
+    fields.join("\n")
   end
-  private_class_method :parse_records
 
   def initialize(...)
     super
@@ -55,9 +55,11 @@ class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
 
   def example_group_finished(notification)
     group = notification.group
+
     return unless group.top_level? && @group_started_at
 
     elapsed_ms = ((RSpec::Core::Time.now - @group_started_at) * 1000).round
+
     @file_durations_ms[group.metadata[:file_path]] += elapsed_ms
     @group_started_at = nil
   end
@@ -74,48 +76,38 @@ class RspecLogfmtFormatter < RSpec::Core::Formatters::BaseFormatter
   private
 
   def logfmt_dump
-    output.puts (node_fields + worker_fields + summary_fields + slow_file_fields).join(" ")
-  end
-
-  def node_fields
-    node = ENV["CIRCLE_NODE_INDEX"]
-    return [] if node.nil? || node.empty?
-
-    [%(tests.node="#{node}")]
-  end
-
-  def worker_fields
-    worker = ENV["TEST_ENV_NUMBER"]
-    return [] if worker.nil?
-
-    worker = "1" if worker.empty?
-    [%(tests.worker="#{worker}")]
-  end
-
-  def summary_fields
-    [
-      %(tests.count="#{@summary.example_count}"),
-      %(tests.skipped="#{@summary.pending_count}"),
-      %(tests.failures="#{@summary.failure_count}"),
-      %(tests.errors="#{@summary.errors_outside_of_examples_count}"),
-      %(tests.retries="#{@retries.count}")
-    ]
+    output.puts [
+      slow_file_fields,
+      %(#{prefix}.count="#{@summary.example_count}"),
+      %(#{prefix}.skipped="#{@summary.pending_count}"),
+      %(#{prefix}.failures="#{@summary.failure_count}"),
+      %(#{prefix}.errors="#{@summary.errors_outside_of_examples_count}"),
+      %(#{prefix}.retries="#{@retries.count}")
+    ].join("\n")
   end
 
   def slow_file_fields
     return [] if @file_durations_ms.empty?
 
-    slowest_file, slowest_ms = @file_durations_ms.max_by { |_file, ms| ms }
-    slow_files = @file_durations_ms.count { |_file, ms| ms > slow_file_threshold_ms }
+    slowest_file, slowest_ms = @file_durations_ms.max_by { |_file, duration| duration }
 
     [
-      %(tests.slow_files="#{slow_files}"),
-      %(tests.slowest_file_ms="#{slowest_ms}"),
-      %(tests.slowest_file="#{slowest_file}")
+      %(#{prefix}.slowest_file="#{slowest_file}"),
+      %(#{prefix}.slowest_file_ms="#{slowest_ms}")
     ]
   end
 
-  def slow_file_threshold_ms
-    Integer(ENV.fetch(SLOW_FILE_THRESHOLD_ENV, DEFAULT_SLOW_FILE_THRESHOLD_MS))
+  def prefix
+    @prefix ||= begin
+      worker = ENV["TEST_ENV_NUMBER"]
+      if worker
+        # parallel_tests leaves TEST_ENV_NUMBER empty for the first worker
+        worker = "1" if worker.empty?
+        node = ENV["CIRCLE_NODE_INDEX"]
+        node ? "tests.#{node}-#{worker}" : "tests.#{worker}"
+      else
+        "tests"
+      end
+    end
   end
 end
