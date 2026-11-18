@@ -52,22 +52,92 @@ Put the same arguments as the commands above in [your `.rspec`][rspec-file]:
   [bundler]: https://bundler.io
   [rspec-file]: https://relishapp.com/rspec/rspec-core/v/3-6/docs/configuration/read-command-line-configuration-options-from-files
 
+### Output
+
+Each run writes one field per line:
+
+```
+tests.slowest_file="./spec/models/deal_spec.rb"
+tests.slowest_file_ms="48213"
+tests.count="6"
+tests.skipped="1"
+tests.failures="3"
+tests.errors="0"
+tests.retries="1"
+```
+
+`tests.retries` is only populated when using [rspec-retry][rspec-retry].
+
+  [rspec-retry]: https://github.com/NoRedInk/rspec-retry
+
+When running in parallel, every field is prefixed with where it ran, so each
+worker's results stay distinct in a shared file:
+
+* the parallel worker, from `TEST_ENV_NUMBER` (set by [flatware][flatware] or [parallel_tests][parallel_tests]).
+  An empty `TEST_ENV_NUMBER`, which parallel_tests uses for its first worker, is treated as `1`
+* the CircleCI container, from `CIRCLE_NODE_INDEX`, joined to the worker as `<node>-<worker>`.
+  It is only used together with `TEST_ENV_NUMBER`
+
+```
+tests.3.count="6"       # TEST_ENV_NUMBER=3
+tests.1-3.count="6"     # CIRCLE_NODE_INDEX=1 TEST_ENV_NUMBER=3
+```
+
+  [flatware]: https://github.com/briandunn/flatware
+  [parallel_tests]: https://github.com/grosser/parallel_tests
+
+### Slow spec files
+
+The formatter times each top-level example group (wall clock, including
+`before(:all)` hooks) and sums them per spec file. It reports the slowest one:
+
+* `tests.slowest_file`: the path of the slowest spec file
+* `tests.slowest_file_ms`: its duration in milliseconds
+
+These fields are omitted when no example groups ran.
+
 ### Parallel tests
 
-You can sum repeated values in one file using `rspec_logfmt_formatter_collate rspec.txt`.
+You can combine the output of several runs in one file using `rspec_logfmt_formatter_collate rspec.txt`.
+`tests.count`, `tests.errors`, `tests.failures`, `tests.retries` and
+`tests.skipped` are summed, and the slowest file is the slowest across all runs,
+reported with its own duration. The worker and node prefixes are dropped. Each
+CircleCI container collates its own file, so with `parallelism` each
+container's span carries its own results; combine them in Honeycomb (e.g.
+`MAX(tests.slowest_file_ms)` per trace).
 
 It will rewrite a file like:
 
 ```
-tests.count="3"
-tests.count="1"
+tests.1.slowest_file="./spec/a_spec.rb"
+tests.1.slowest_file_ms="900"
+tests.1.count="3"
+tests.1.skipped="1"
+tests.1.failures="0"
+tests.1.errors="0"
+tests.1.retries="0"
+tests.2.slowest_file="./spec/b_spec.rb"
+tests.2.slowest_file_ms="1500"
+tests.2.count="1"
+tests.2.skipped="0"
+tests.2.failures="1"
+tests.2.errors="0"
+tests.2.retries="0"
 ```
 
 into:
 
 ```
 tests.count="4"
+tests.errors="0"
+tests.failures="1"
+tests.retries="0"
+tests.skipped="1"
+tests.slowest_file="./spec/b_spec.rb"
+tests.slowest_file_ms="1500"
 ```
+
+`tests.slowest_file` and `tests.slowest_file_ms` are left out when no run reported a slowest file.
 
 ### How to push to Honeycomb
 
@@ -89,7 +159,7 @@ Currently this is a manual process and can only be run by a carwow developer.
 
 1. Ensure your `~/.gem/credentials` are correct
 2. Update the [CHANGELOG.md](./CHANGELOG.md)
-3. Update the [version.rb](./lib/rspec_logfmt_formatter/version.rb)
+3. Update the version in the [gemspec](./rspec_logfmt_formatter.gemspec)
 4. Run `bundle exec rake upload`
 5. Check the tag was pushed and the new version was released
 
