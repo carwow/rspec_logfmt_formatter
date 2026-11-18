@@ -53,7 +53,7 @@ describe RspecLogfmtFormatter do
           /\A
           tests\.slowest_file="\.\/spec\/slow_spec\.rb"\n
           tests\.slowest_file_ms="\d+"\n
-          tests\.count="6"\n
+          tests\.count="7"\n
           tests\.skipped="1"\n
           tests\.failures="3"\n
           tests\.errors="0"\n
@@ -65,8 +65,9 @@ describe RspecLogfmtFormatter do
       it "reports the duration of the slowest spec file in milliseconds" do
         slowest_ms = formatter_output[/tests\.slowest_file_ms="(\d+)"/, 1].to_i
 
-        # slow_spec.rb sleeps for 300ms in a before(:all)
-        expect(slowest_ms).to be >= 300
+        # slow_spec.rb has two top-level groups, each sleeping 300ms in a before(:all),
+        # so this only passes if their times are summed per file
+        expect(slowest_ms).to be >= 600
       end
     end
 
@@ -78,7 +79,7 @@ describe RspecLogfmtFormatter do
 
         expect(formatter_output.lines).to all(start_with("tests.3."))
         expect(formatter_output).to include(%(tests.3.slowest_file="./spec/slow_spec.rb"))
-        expect(formatter_output).to include(%(tests.3.count="6"))
+        expect(formatter_output).to include(%(tests.3.count="7"))
       end
     end
 
@@ -94,7 +95,7 @@ describe RspecLogfmtFormatter do
       it "produces output that still collates" do
         execute_example_spec
 
-        expect(described_class.collate(formatter_output)).to include(%(tests.count="6"))
+        expect(described_class.collate(formatter_output)).to include(%(tests.count="7"))
       end
     end
 
@@ -107,7 +108,7 @@ describe RspecLogfmtFormatter do
 
         expect(formatter_output.lines).to all(start_with("tests.1-3."))
         expect(formatter_output).to include(%(tests.1-3.slowest_file="./spec/slow_spec.rb"))
-        expect(formatter_output).to include(%(tests.1-3.count="6"))
+        expect(formatter_output).to include(%(tests.1-3.count="7"))
       end
     end
 
@@ -128,7 +129,7 @@ describe RspecLogfmtFormatter do
 
       expect(collated).to match(
         /\A
-        tests\.count="6"\n
+        tests\.count="7"\n
         tests\.errors="0"\n
         tests\.failures="3"\n
         tests\.retries="1"\n
